@@ -117,58 +117,21 @@ void PapasVision::findBoiler(int pictureFile, VideoCapture& camera1) {
         }
     }
 
-    Mat greenFrameRes;
-    getGreenResidual(frame, greenFrameRes);
-    if (writeIntermediateFilesToDisk)
-    {
-        imwrite(pathPrefix + "_1_green_residual.png", greenFrameRes);
-    }
+    // Get ALL the contours.
+    vector<vector<Point>> contours = findAllContoursInImage(writeIntermediateFilesToDisk, pathPrefix, frame);
 
-    Mat greenFrameResFilt;
-    bilateralFilter(greenFrameRes, greenFrameResFilt, 9, 75, 75);
-    if (writeIntermediateFilesToDisk)
-    {
-        imwrite(pathPrefix + "_2_green_residual_filt.png", greenFrameResFilt);
-    }
-
-    cancelColorsTape(greenFrameResFilt, output);
-    if (writeIntermediateFilesToDisk)
-    {
-        imwrite(pathPrefix + "_3_cancelcolors.png", output);
-    }
-
-    erode(output, output, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-    dilate(output, output, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-    dilate(output, output, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-    erode(output, output, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
-    if (writeIntermediateFilesToDisk)
-    {
-        imwrite(pathPrefix + "_4_cancelcolors_morphfilt.png", output);
-    }
-
-    vector<vector<Point>> contours = findContours(output);
-
-    Mat frameContours = frame.clone();
-    for (unsigned int i = 0; i < contours.size(); i++)
-    {
-        drawContours(frameContours, contours, i, Scalar(0, 0, 255));
-    }
-    if (writeIntermediateFilesToDisk)
-    {
-        imwrite(pathPrefix + "_5_frame_contours.png", frameContours);
-    }
-
-    contours = filterContours(contours);
-
-    Mat frameFiltContours = frame.clone();
-    for (unsigned int i = 0; i < contours.size(); i++)
-    {
-        drawContours(frameFiltContours, contours, i, Scalar(0, 0, 255));
-    }
-    if (writeIntermediateFilesToDisk)
-    {
-        imwrite(pathPrefix + "_6_frame_filtcontours.png", frameFiltContours);
-    }
+    // TODO: Pairwise comparison of every contour we got, then we evaluate David's link
+    // to see what criteria are necessary for determining the viability of each pair.
+    // I'm thinkin':
+    //
+    // struct ContourPair {
+    //   ContourPair(const vector<string>&, const vector<string>&);
+    //   const vector<string>& firstContour;
+    //   const vector<string>& secondContour;
+    //   double score;
+    // }
+    //
+    // We sort these or otherwise obtain the largest one.
 
     if (contours.size() > 0)
     {
@@ -368,6 +331,74 @@ void PapasVision::findPeg(int pictureFile, VideoCapture& camera2) {
 ///////////////////////////////////////////
 // Computer vision processing functions. //
 ///////////////////////////////////////////
+
+vector<vector<Point>> PapasVision::findAllContoursInImage(bool writeIntermediateFilesToDisk, const string& pathPrefix, const cv::Mat& frame) const {
+
+    // This is the intermediate image that we're manipulating as we process the various phases of
+    // this algorithm.
+    Mat output;
+    Mat greenFrameRes;
+    getGreenResidual(frame, greenFrameRes);
+    if (writeIntermediateFilesToDisk)
+    {
+        imwrite(pathPrefix + "_1_green_residual.png", greenFrameRes);
+    }
+
+    Mat greenFrameResFilt;
+    bilateralFilter(greenFrameRes, greenFrameResFilt, 9, 75, 75);
+    if (writeIntermediateFilesToDisk)
+    {
+        imwrite(pathPrefix + "_2_green_residual_filt.png", greenFrameResFilt);
+    }
+
+    cancelColorsTape(greenFrameResFilt, output);
+    if (writeIntermediateFilesToDisk)
+    {
+        imwrite(pathPrefix + "_3_cancelcolors.png", output);
+    }
+
+    erode(output, output, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+    dilate(output, output, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+    dilate(output, output, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+    erode(output, output, getStructuringElement(MORPH_ELLIPSE, Size(5, 5)));
+    if (writeIntermediateFilesToDisk)
+    {
+        imwrite(pathPrefix + "_4_cancelcolors_morphfilt.png", output);
+    }
+
+    vector<vector<Point>> contours = findContours(output);
+
+    Mat frameContours = frame.clone();
+    for (unsigned int i = 0; i < contours.size(); i++)
+    {
+        drawContours(frameContours, contours, i, Scalar(0, 0, 255));
+    }
+    if (writeIntermediateFilesToDisk)
+    {
+        imwrite(pathPrefix + "_5_frame_contours.png", frameContours);
+    }
+
+    Mat frameFiltContours = frame.clone();
+    for (unsigned int i = 0; i < contours.size(); i++)
+    {
+        drawContours(frameFiltContours, contours, i, Scalar(0, 0, 255));
+    }
+    if (writeIntermediateFilesToDisk)
+    {
+        imwrite(pathPrefix + "_6_frame_filtcontours.png", frameFiltContours);
+    }
+
+    // At this point, we have a list of contours big and small, including contours that we will
+    // never, ever care about.  We pass this back to the caller; the caller will use an O(N^2)
+    // algorithm to do pairwise comparisons of all those contours in order to find the best pair
+    // that represents the boiler.
+
+    // Uncommenting this line will filter the contours, leaving less work for the caller,
+    // **BUT** it filters too much right now, so we decided to disable that and just deal
+    // with the consequences.
+    // contours = filterContours(contours);
+    return contours;
+}
 
 void PapasVision::getGreenResidual(const cv::Mat &rgbFrame, cv::Mat &greenResidual) const
 {

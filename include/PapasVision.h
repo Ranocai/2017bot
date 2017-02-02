@@ -47,6 +47,7 @@ class PapasVision {
         // findgoal(). This is important so we will not get false positives.
         double goalRejectionThresholdInches;
 
+        std::vector<std::vector<cv::Point>> findAllContoursInImage(bool writeIntermediateFilesToDisk, const std::string& pathPrefix, const cv::Mat& frame) const;
         void getGreenResidual(const cv::Mat& rgbFrame, cv::Mat& greenResidual) const;
         void convertImage(const cv::Mat& input, cv::Mat& output) const;
         void cancelColorsTape(const cv::Mat& input, cv::Mat& output) const;
