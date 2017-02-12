@@ -32,19 +32,21 @@ import java.lang.Math;
 public class Robot extends IterativeRobot {
 	final String defaultAuto = "Default";
 	final String customAuto = "My Auto";
-	public static final double thresholdX = .35;		//Added to make sure the drive isn't too sensitive
-	public static final double thresholdY = .2;			//As Above
-	public static final double thresholdTwist = .2;		//As Above
-	public static final double low = .45;				//Added to lower speed for precision
-	public static final double medium = .65;			//Added to lower speed for power saving
-	public static final double high = .75;				//Added to limit speed slightly
-	public static final int max = 1;					//Added because it made everything easier to do code wise.
-	public static double testShooterSpeed = .5;			//Used to test shooter speed to determine best distance.
-	public static double accX = 0;						//Accleration in the X-direction
-	public static double accY = 0;						//Acceleration in the Y-direction
-	public static double accZ = 0;						//Acceleration in the Z-direction
-	public static double accTotal = 0;					//Total Acceleration, as read by the accelerometer
-	public static final double littleAdjust = 0.1;		//For making little adjustments with the accelerometer code.
+	public static final double thresholdX = .35;					//Added to make sure the drive isn't too sensitive
+	public static final double thresholdY = .2;						//As Above
+	public static final double thresholdTwist = .2;					//As Above
+	public static final double low = .45;							//Added to lower speed for precision
+	public static final double medium = .65;						//Added to lower speed for power saving
+	public static final double high = .75;							//Added to limit speed slightly
+	public static final int max = 1;								//Added because it made everything easier to do code wise.
+	public static double testShooterSpeed = .5;						//Used to test shooter speed to determine best distance.
+	public static double accX = 0;									//Accleration in the X-direction
+	public static double accY = 0;									//Acceleration in the Y-direction
+	public static double accZ = 0;									//Acceleration in the Z-direction
+	public static double accTotal = 0;								//Total Acceleration, as read by the accelerometer
+	public static final double littleAdjust = 0.1;					//For making little adjustments with the accelerometer code.
+	private ServerRunnable runnable = new ServerRunnable(12345);	//Used to receive information from PapasData, or the lies we feed it.
+	private Thread papasThread = null;								//Thread that runs our ServerRunnable
 	//public static final ExampleSubsystem exampleSubsystem = new ExampleSubsystem();
 	public static OI oi;
 
@@ -93,6 +95,10 @@ public class Robot extends IterativeRobot {
 		gyro = new ADXRS450_Gyro();
 		gyro.reset();
 		gyro.calibrate();
+		
+		papasThread = new Thread(runnable);
+		papasThread.setName("PapasData reception");
+		papasThread.start();
 
 		/*
 		 If you draw an imaginary "И" (Cyrillic ee) on the top of the robot
@@ -323,5 +329,18 @@ public class Robot extends IterativeRobot {
 	 */
 	public void testPeriodic() {
 		LiveWindow.run();
+	}
+	
+	/**
+	 * This function is called when the thread dies.
+	 */
+	public void finalize() {
+		runnable.die();
+		try {
+			papasThread.join();
+		} catch (Throwable t) {
+			// Swallow the exception, but log first.
+			System.err.println(t.getMessage());	
+		}
 	}
 }

@@ -34,7 +34,8 @@
             independently.
         -->
         <target name="create_command_line_jar">
-                <jar destfile="${basedir}/bin/TerminalTest.jar"
+            <mkdir dir="${basedir}/bin"/>
+        	<jar destfile="${basedir}/bin/TerminalTest.jar"
                      update="true">
                         <manifest>
                                 <attribute name="Main-Class" value="org.usfirst.frc.team1759.terminal.TerminalTest"/>
